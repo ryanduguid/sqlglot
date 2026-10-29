@@ -125,6 +125,22 @@ class SQLiteParser(parser.Parser):
         TokenType.MATCH: binary_range_parser(exp.Match),
     }
 
+    def _build_predicate(
+        self,
+        klass: type[exp.Binary],
+        this: exp.Expr | None,
+        expression: exp.Expr | None,
+        comments: list[str] | None = None,
+        negate: bool = False,
+    ) -> exp.Expr:
+        # IS compares any two operands null-safely, not just NULL and booleans
+        # https://www.sqlite.org/lang_expr.html#isisnot
+        if klass is exp.Is and not isinstance(
+            expression and expression.unnest(), (exp.Null, exp.Boolean)
+        ):
+            klass = exp.NullSafeEQ
+        return super()._build_predicate(klass, this, expression, comments=comments, negate=negate)
+
     def _parse_is_rhs(self, distinct: bool = False) -> exp.Expr | None:
         # Ordering comparisons bind above IS, but range predicates bind below it.
         this = self._parse_bitwise()

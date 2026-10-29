@@ -473,6 +473,30 @@ class TestSQLite(Validator):
         self.validate_identity(
             "SELECT * FROM t WHERE NULL IS NOT y", "SELECT * FROM t WHERE NOT NULL IS y"
         )
+        self.assertIsInstance(self.parse_one("a IS b"), exp.NullSafeEQ)
+        self.assertIsInstance(self.parse_one("a IS NULL"), exp.Is)
+        self.assertIsInstance(self.parse_one("a IS TRUE"), exp.Is)
+        self.validate_all(
+            "SELECT a IS b, a IS NOT b FROM t",
+            write={
+                "sqlite": "SELECT a IS b, NOT a IS b FROM t",
+                "duckdb": "SELECT a IS NOT DISTINCT FROM b, NOT a IS NOT DISTINCT FROM b FROM t",
+                "mysql": "SELECT a <=> b, NOT a <=> b FROM t",
+                "postgres": "SELECT a IS NOT DISTINCT FROM b, NOT a IS NOT DISTINCT FROM b FROM t",
+            },
+        )
+        self.validate_all(
+            "SELECT a IS b FROM t",
+            read={"postgres": "SELECT a IS NOT DISTINCT FROM b FROM t"},
+        )
+        self.assertIsInstance(self.parse_one("a IS (TRUE)"), exp.Is)
+        self.validate_all(
+            "SELECT a IS 1, a IS 0, a IS NOT DISTINCT FROM NULL FROM t",
+            read={
+                "postgres": "SELECT a IS NOT DISTINCT FROM TRUE, a IS NOT DISTINCT FROM (FALSE), a IS NOT DISTINCT FROM NULL FROM t",
+                "mysql": "SELECT a <=> TRUE, a <=> FALSE, a <=> NULL FROM t",
+            },
+        )
         self.validate_identity("SELECT SQLITE_VERSION()")
 
     def test_json_arrow_precedence(self):

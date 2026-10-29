@@ -59,13 +59,19 @@ class TestPostgres(Validator):
             "NULL LIKE '0' ESCAPE '!'",
             "NULL NOT LIKE '0' ESCAPE '!'",
         ):
-            for operator in ("IS DISTINCT FROM", "IS NOT DISTINCT FROM"):
+            for operator, sqlite_operator in (
+                ("IS DISTINCT FROM", "IS DISTINCT FROM"),
+                ("IS NOT DISTINCT FROM", "IS"),
+            ):
                 rhs = self.parse_one(predicate).sql("postgres")
                 self.validate_all(
                     f"SELECT NULL {operator} {predicate}",
                     write={
-                        dialect: f"SELECT NULL {operator} ({rhs})"
-                        for dialect in ("postgres", "sqlite", "duckdb", "snowflake", "redshift")
+                        "sqlite": f"SELECT NULL {sqlite_operator} ({rhs})",
+                        **{
+                            dialect: f"SELECT NULL {operator} ({rhs})"
+                            for dialect in ("postgres", "duckdb", "snowflake", "redshift")
+                        },
                     },
                 )
         self.validate_all(

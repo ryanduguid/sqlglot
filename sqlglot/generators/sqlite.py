@@ -233,6 +233,17 @@ class SQLiteGenerator(generator.Generator):
         self.unsupported("BITWISE_XOR aggregation is not supported in SQLite")
         return self.function_fallback_sql(expression)
 
+    def nullsafeeq_sql(self, expression: exp.NullSafeEQ) -> str:
+        # IS TRUE and IS FALSE are truth tests, even when parenthesized (2 IS TRUE is true),
+        # so compare with 1 or 0 instead
+        rhs = expression.expression.unnest()
+        if isinstance(rhs, exp.Null):
+            return super().nullsafeeq_sql(expression)
+        if isinstance(rhs, exp.Boolean):
+            expression = expression.copy()
+            expression.set("expression", exp.Literal.number(int(rhs.this)))
+        return self.binary(expression, "IS")
+
     def jsonextract_sql(self, expression: exp.JSONExtract) -> str:
         if expression.expressions:
             return self.function_fallback_sql(expression)
