@@ -279,6 +279,9 @@ class SQLiteGenerator(generator.Generator):
             return self.func("DATETIME", expression.this)
         if expression.is_type("time"):
             return self.func("TIME", expression.this)
+        if expression.is_type("json", "jsonb"):
+            # JSON has NUMERIC affinity, so CAST(x AS JSON) turns a JSON text into 0
+            return self.func("JSON", expression.this)
 
         return super().cast_sql(expression)
 

@@ -21,6 +21,15 @@ class TestSQLite(Validator):
                         read={"": f"SELECT CAST({value} AS {dtype})"},
                     )
 
+        self.validate_all(
+            "SELECT JSON(x) FROM t",
+            read={
+                "duckdb": "SELECT CAST(x AS JSON) FROM t",
+                "mysql": "SELECT CAST(x AS JSON) FROM t",
+                "postgres": "SELECT x::JSONB FROM t",
+            },
+        )
+
     def test_is_precedence(self):
         self.validate_identity("SELECT 'x' LIKE 'x' NOT LIKE '1'")
         for suffix in ("IN (0)", "BETWEEN 0 AND 0", "LIKE '0'", "GLOB '0'"):
